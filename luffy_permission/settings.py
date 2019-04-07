@@ -47,6 +47,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'rbac.middlewares.rbac.Rbac'
 ]
 
 ROOT_URLCONF = 'luffy_permission.urls'
@@ -101,7 +102,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/1.11/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+# LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'zh-hans'
 
 TIME_ZONE = 'UTC'
 
@@ -160,3 +162,14 @@ FILE_UPLOAD_PERMISSIONS = None
 # see https://docs.python.org/3/library/os.html#files-and-directories.
 # 文件夹权限
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = None
+
+# 用户session key
+PERMISSION_SESSION_KEY = "luffy_permission_url_list"
+
+MENU_SESSION_KEY = "luffy_menu_url_list"
+
+VAILD_URL_LIST = [
+    "/login/",
+    "/admin/.*",
+    "/index/"
+]
