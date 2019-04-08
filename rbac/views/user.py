@@ -63,11 +63,11 @@ def user_del(request, pk):
     :param pk: 要删除角色的id
     :return:
     """
-    origin_url = reverse('rbac:role_list')
+    origin_url = reverse('rbac:user_list')
     if request.method == 'GET':
         return render(request, 'rbac/delete.html', {'cancel_url': origin_url})
 
-    models.Role.objects.filter(id=pk).delete()
+    models.UserInfo.objects.filter(id=pk).delete()
 
     return redirect(origin_url)
 

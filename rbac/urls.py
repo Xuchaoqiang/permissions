@@ -3,7 +3,7 @@
 # Author:Irving
 
 from django.conf.urls import url, include
-from rbac.views import role, user
+from rbac.views import role, user, menu
 
 app_name = 'rbac'
 urlpatterns = [
@@ -19,4 +19,8 @@ urlpatterns = [
     url(r'^user/edit/(?P<pk>\d+)/$', user.user_edit, name='user_edit'),
     url(r'^user/del/(?P<pk>\d+)/$', user.user_del, name='user_del'),
     url(r'^user/reset/password/(?P<pk>\d+)/$', user.user_reset_pwd, name='user_reset_pwd'),
+
+    # 权限分配
+    url(r'^menu/list/$', menu.menu_list, name='menu_list'),
+
 ]
