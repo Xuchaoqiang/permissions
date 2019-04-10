@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$USER_HOME$/PycharmProjects/formset_mod/.idea/formset_mod.iml" filepath="$USER_HOME$/PycharmProjects/formset_mod/.idea/formset_mod.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/luffy_permission.iml" filepath="$PROJECT_DIR$/.idea/luffy_permission.iml" />
     </modules>
   </component>

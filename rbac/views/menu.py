@@ -1,10 +1,13 @@
 #!-*- coding:utf-8 -*-
 # __author__:"irving"
-
+from collections import OrderedDict
 from django.shortcuts import render, redirect, reverse, HttpResponse
 from rbac import models
-from rbac.forms.menu import MenuModeForm, SecondMenuModeForm
+from rbac.forms.menu import MenuModeForm, SecondMenuModeForm, PermissionMenuModeForm, MultiAddPermissionForm, \
+    MultiEditPermissionForm
 from rbac.service.urls import memory_reverse
+from rbac.service.routes import get_all_url_dict
+from django.forms import formset_factory
 
 
 def menu_list(request):
@@ -15,12 +18,23 @@ def menu_list(request):
     """
     menus = models.Menu.objects.all()
     menu_id = request.GET.get('mid')  # 用户选择的一级菜单
-    second_menu_id = request.GET.get('sid')    # 用户选择的二级菜单
+    second_menu_id = request.GET.get('sid')  # 用户选择的二级菜单
 
+    menu_exists = models.Menu.objects.filter(id=menu_id).first()
+    if not menu_exists:
+        menu_id = None
     if menu_id:
         second_menus = second_menus = models.Permission.objects.filter(menu=menu_id)
     else:
         second_menus = []
+
+    second_menu_exists = models.Permission.objects.filter(id=second_menu_id).first()
+    if not second_menu_id:
+        second_menu_id = None
+    if second_menu_id:
+        permissions = models.Permission.objects.filter(pid_id=second_menu_id)
+    else:
+        permissions = []
 
     return render(
         request,
@@ -29,6 +43,7 @@ def menu_list(request):
             'menus': menus,
             'menu_id': menu_id,
             'second_menus': second_menus,
+            'permissions': permissions,
             'second_menu_id': second_menu_id
         }
     )
@@ -137,6 +152,191 @@ def second_menu_del(request, pk):
     :return:
     """
     url = memory_reverse(request, 'rbac:menu_list')
+
+    if request.method == 'GET':
+        return render(request, 'rbac/delete.html', {'cancel_url': url})
+
+    models.Permission.objects.filter(id=pk).delete()
+
+    return redirect(url)
+
+
+def permission_add(request, second_menu_id):
+    """
+    添加权限
+    :param request:
+    :param second_menu_id: 需要权限到哪一个二级菜单
+    :return:
+    """
+    if request.method == "GET":
+        form = PermissionMenuModeForm()
+        return render(request, "rbac/change.html", {'form': form})
+
+    form = PermissionMenuModeForm(data=request.POST)
+    if form.is_valid():
+        second_menu_object = models.Permission.objects.filter(id=second_menu_id).first()
+        form.instance.pid = second_menu_object
+        form.save()
+        return redirect(memory_reverse(request, 'rbac:menu_list'))
+
+    return render(request, "rbac/change.html", {'form': form})
+
+
+def permission_edit(request, pk):
+    """
+    编辑权限
+    :param request:
+    :param pk: 当前要编辑的权限
+    :return:
+    """
+    permission_object = models.Permission.objects.filter(pk=pk).first()
+
+    if request.method == "GET":
+        form = PermissionMenuModeForm(instance=permission_object)
+        return render(request, "rbac/change.html", {'form': form})
+
+    form = PermissionMenuModeForm(instance=permission_object, data=request.POST)
+    if form.is_valid():
+        form.save()
+        return redirect(memory_reverse(request, 'rbac:menu_list'))
+
+
+def permission_del(request, pk):
+    """
+    删除权限
+    :param request:
+    :param second_menu_id: 当前要删除的权限
+    :return:
+    """
+    url = memory_reverse(request, 'rbac:menu_list')
+
+    if request.method == 'GET':
+        return render(request, 'rbac/delete.html', {'cancel_url': url})
+
+    models.Permission.objects.filter(id=pk).delete()
+
+    return redirect(url)
+
+
+def multi_permissions(request):
+    """
+    批量操作权限
+    :param request:
+    :return:
+    """
+    post_type = request.GET.get('type')
+    generate_formset_class = formset_factory(MultiAddPermissionForm, extra=0)
+    update_formset_class = formset_factory(MultiEditPermissionForm, extra=0)
+
+    generate_formset = None
+    update_formset = None
+
+    if request.method == 'POST' and post_type == 'generate':
+        formset = generate_formset_class(data=request.POST)
+        if formset.is_valid():
+            object_list = []
+            post_row_list = formset.cleaned_data
+            has_error = False
+            for i in range(0, formset.total_form_count()):
+                row_dict = post_row_list[i]
+                try:
+                    new_object = models.Permission(**row_dict)
+                    new_object.validate_unique()
+                    object_list.append(new_object)
+                except Exception as e:
+                    formset.errors[i].update(e)
+                    generate_formset = formset
+                    has_error = True
+            if not has_error:
+                models.Permission.objects.bulk_create(object_list)
+        else:
+            generate_formset = formset
+
+    if request.method == "POST" and post_type == 'update':
+        formset = update_formset_class(data=request.POST)
+        if formset.is_valid():
+            post_row_list = formset.cleaned_data
+            for i in range(0, formset.total_form_count()):
+                row_dict = post_row_list[i]
+                permission_id = row_dict.pop('id')
+                try:
+                    row_object = models.Permission.objects.filter(id=permission_id).first()
+                    for k, v in row_dict.items():
+                        print(k, v)
+                        setattr(row_object, k, v)
+                    row_object.validate_unique()
+                    row_object.save()
+                except Exception as e:
+                    formset.errors[i].update(e)
+                    update_formset = formset
+        else:
+            update_formset = formset
+
+    # 1.获取项目中所有的URL
+    all_url_dict = get_all_url_dict()
+    """
+    {
+        'rbac:role_list':{'name': 'rbac:role_list', 'url': '/rbac/role/list/'},
+        'rbac:role_add':{'name': 'rbac:role_add', 'url': '/rbac/role/add/'},
+        ....
+    }
+    """
+    router_name_set = set(all_url_dict.keys())
+
+    # 2.获取数据库中所有的URL
+    permissions = models.Permission.objects.all().values('id', 'title', 'name', 'url', 'menu_id', 'pid_id')
+    permissions_dict = OrderedDict()
+    permissions_name_set = set()
+    for row in permissions:
+        permissions_dict[row['name']] = row
+        permissions_name_set.add(row['name'])
+    """
+    {
+        'rbac:role_list': {'id':1,'title':'角色列表',name:'rbac:role_list',url.....},
+        'rbac:role_add': {'id':1,'title':'添加角色',name:'rbac:role_add',url.....},
+        ...
+    }
+    """
+
+    for name, value in permissions_dict.items():
+        router_row_dict = all_url_dict.get(name)  # {'name': 'rbac:role_list', 'url': '/rbac/role/list/'},
+        if not router_row_dict:
+            continue
+        if value['url'] != router_row_dict['url']:
+            value['url'] = "路由和数据库不一致"
+
+    # 3.应该添加、删除、修改的权限有哪些
+    # 3.1 计算出应该增加的name
+    if not generate_formset:
+        generate_name_list = router_name_set - permissions_name_set
+        generate_formset = generate_formset_class(
+            initial=[row_dict for name, row_dict in all_url_dict.items() if name in generate_name_list])
+
+    # 3.2 计算出应该删除的name
+    delete_name_list = permissions_name_set - router_name_set
+    delete_row_list = [row_dict for name, row_dict in permissions_dict.items() if name in delete_name_list]
+
+    # 3.3 计算出应该更新的name
+    if not update_formset:
+        update_name_list = permissions_name_set & router_name_set
+        update_formset = update_formset_class(
+            initial=[row_dict for name, row_dict in permissions_dict.items() if name in update_name_list])
+
+    return render(request, "rbac/multi_permissions.html", {
+        'generate_formset': generate_formset,
+        'delete_row_list': delete_row_list,
+        'update_formset': update_formset
+    })
+
+
+def multi_permissions_del(request, pk):
+    """
+    批量页面的权限删除
+    :param request:
+    :param second_menu_id: 当前要删除的权限
+    :return:
+    """
+    url = memory_reverse(request, 'rbac:multi_permissions_del')
 
     if request.method == 'GET':
         return render(request, 'rbac/delete.html', {'cancel_url': url})

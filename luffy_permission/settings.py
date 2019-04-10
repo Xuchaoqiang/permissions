@@ -173,3 +173,7 @@ VAILD_URL_LIST = [
     "/admin/.*",
     "/index/"
 ]
+
+AUTO_DISCOVER_EXCLUDE = [
+    '/admin/.*'
+]

@@ -31,5 +31,13 @@ urlpatterns = [
     url(r'^second/menu/edit/(?P<pk>\d+)/$', menu.second_menu_edit, name='second_menu_edit'),
     url(r'^second/menu/del/(?P<pk>\d+)/$', menu.second_menu_del, name='second_menu_del'),
 
+    # 权限
+    url(r'^permission/add/(?P<second_menu_id>\d+)$', menu.permission_add, name='permission_add'),
+    url(r'^permission/edit/(?P<pk>\d+)/$', menu.permission_edit, name='permission_edit'),
+    url(r'^permission/del/(?P<pk>\d+)/$', menu.permission_del, name='permission_del'),
+
+    # 批量显示url
+    url(r'^multi/permissions/$', menu.multi_permissions, name='multi_permissions'),
+    url(r'^multi/permissions/del/(?P<pk>\d+)$', menu.multi_permissions_del, name='multi_permissions_del'),
 
 ]
